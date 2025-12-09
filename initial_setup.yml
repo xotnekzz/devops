@@ -1,0 +1,42 @@
+---
+- name: DevOps Base Environment Setup
+  hosts: all
+  become: yes
+  tasks:
+    - name: 1. 필수 패키지 설치 (EPEL, Network Tools 등)
+      dnf:
+        name:
+          - epel-release
+          - vim
+          - git
+          - wget
+          - curl
+          - net-tools   # ifconfig 등
+          - bind-utils  # nslookup 등
+          - tar
+        state: present
+
+    - name: 2. 타임존 설정 (Asia/Seoul)
+      timezone:
+        name: Asia/Seoul
+
+    - name: 3. 방화벽 비활성화 (실습 편의성)
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+
+    - name: 4. Swap 메모리 비활성화 (K8s 필수 조건)
+      shell: |
+        swapoff -a
+        sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+    - name: 5. /etc/hosts 파일 구성 (서버 이름으로 통신 가능하게)
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          192.168.56.11 server-1
+          192.168.56.12 server-2
+          192.168.56.13 server-3
+          192.168.56.14 server-4
+          192.168.56.15 server-5
