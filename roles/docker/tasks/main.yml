@@ -1,0 +1,39 @@
+---
+- name: Remove conflicting packages (podman, buildah)
+  dnf:
+    name:
+      - podman
+      - buildah
+    state: absent
+
+- name: Add Docker CE repository
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
+
+- name: Install Docker packages
+  dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+      - python3-pip  # Ansible 모듈용
+    state: present
+
+- name: Install Python Docker SDK (Required for Ansible docker_container module)
+  pip:
+    name: docker
+    executable: pip3
+
+- name: Start and Enable Docker service
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add 'vagrant' user to docker group
+  user:
+    name: vagrant
+    groups: docker
+    append: yes

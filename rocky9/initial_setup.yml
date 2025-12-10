@@ -40,3 +40,6 @@
           192.168.56.13 server-3
           192.168.56.14 server-4
           192.168.56.15 server-5
+
+  roles:
+      - docker
