@@ -1,0 +1,52 @@
+---
+- name: Rolling Update Backend Nodes
+  hosts: be_servers
+  become: true
+  # [핵심] 한 번에 1대씩 순차적으로 실행 (1번 완료 -> 2번 시작)
+  serial: 1
+  # 업데이트 실패 시 즉시 중단하여 나머지 노드 보호
+  max_fail_percentage: 0
+
+  tasks:
+    - name: Update be.conf Configuration
+      template:
+        src: roles/be/templates/be.conf.j2
+        dest: /data/starrocks/be/conf/be.conf
+      register: config_changed
+
+    - name: Pull Latest Image (Optional)
+      docker_image:
+        name: starrocks/be-ubuntu:latest
+        source: pull
+      register: image_pulled
+
+    # 설정이나 이미지가 변경된 경우에만 재시작
+    - name: Recreate BE Container
+      docker_container:
+        name: starrocks-be
+        image: starrocks/be-ubuntu:latest
+        state: started
+        restart: yes # 변경 사항 적용을 위한 재시작
+        network_mode: host
+        privileged: true
+        volumes:
+          - /data/starrocks/be/storage:/opt/starrocks/be/storage
+          - /data/starrocks/be/conf/be.conf:/opt/starrocks/conf/be.conf
+          - /data/starrocks/be/log:/opt/starrocks/be/log
+        env:
+          TZ: "Asia/Seoul"
+      when: config_changed.changed or image_pulled.changed
+
+    # [Health Check] 해당 노드가 다시 살아날 때까지 대기
+    - name: Wait for BE Heartbeat Port (9050)
+      wait_for:
+        port: 9050
+        host: '127.0.0.1'
+        delay: 10
+        timeout: 300
+      when: config_changed.changed or image_pulled.changed
+
+    - name: Brief Pause for Cluster Sync
+      pause:
+        seconds: 10
+      when: config_changed.changed or image_pulled.changed

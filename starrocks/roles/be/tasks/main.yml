@@ -1,0 +1,36 @@
+---
+- name: Create BE Directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /data/starrocks/be/storage
+    - /data/starrocks/be/conf
+    - /data/starrocks/be/log
+
+- name: Deploy be.conf
+  template:
+    src: be.conf.j2
+    dest: /data/starrocks/be/conf/be.conf
+
+- name: Run BE Container
+  docker_container:
+    name: starrocks-be
+    image: starrocks/be-ubuntu:latest
+    network_mode: host
+    privileged: true  # 성능 최적화
+    restart_policy: unless-stopped
+    hostname: "{{ inventory_hostname }}"
+    command: >
+      /opt/starrocks/be/bin/start_be.sh server-1:9010
+    recreate: yes
+    volumes:
+      - /data/starrocks/be/storage:/opt/starrocks/be/storage
+      - /data/starrocks/be/conf/be.conf:/opt/starrocks/be/conf/be.conf
+      - /data/starrocks/be/log:/opt/starrocks/be/log
+    env:
+      TZ: "Asia/Seoul"
+      HOST_TYPE: "FQDN"
+      JAVA_OPTS_BE: "-Dbe_host={{ inventory_hostname }}"
+      BE_HOST: "{{ inventory_hostname }}"

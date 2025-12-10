@@ -1,0 +1,35 @@
+---
+- name: Disable Swap (Runtime)
+  command: swapoff -a
+  when: ansible_facts['swaptotal_mb'] > 0
+
+- name: Disable Swap (Permanent)
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+
+- name: Set vm.max_map_count (Required for BE)
+  sysctl:
+    name: vm.max_map_count
+    value: '2000000'
+    state: present
+    reload: yes
+
+
+#  Chrony 설치 (시간 동기화)
+- name: Install chrony
+  package:
+    name: chrony
+    state: present
+
+- name: Enable and start chronyd
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
+
+#  강제로 시간 동기화 수행 (즉시 보정)
+- name: Force time synchronization
+  shell: chronyc -a makestep
+  ignore_errors: yes # 이미 동기화된 경우 에러 무시

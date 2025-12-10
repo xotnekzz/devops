@@ -1,0 +1,22 @@
+---
+- name: Cleanup StarRocks Data
+  hosts: all_servers
+  become: true
+  tasks:
+    - name: Stop and Remove Containers
+      docker_container:
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - starrocks-fe
+        - starrocks-be
+
+    - name: Remove Metadata and Storage Data
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /data/starrocks/fe/meta
+        - /data/starrocks/fe/log
+        - /data/starrocks/be/storage
+        - /data/starrocks/be/log

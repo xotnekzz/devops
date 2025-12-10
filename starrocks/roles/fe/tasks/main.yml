@@ -1,0 +1,47 @@
+---
+- name: Create FE Directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /data/starrocks/fe/meta
+    - /data/starrocks/fe/conf
+    - /data/starrocks/fe/log
+
+- name: Deploy fe.conf
+  template:
+    src: fe.conf.j2
+    dest: /data/starrocks/fe/conf/fe.conf
+
+- name: Pre-register this Follower to Leader
+  delegate_to: server-1  # 이 작업은 server-1에서 실행
+  shell: |
+    # 리더(server-1)에게 접속해서 현재 노드(inventory_hostname)를 등록
+    docker exec starrocks-fe mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD FOLLOWER '{{ inventory_hostname }}:9010';"
+  # 리더 자신은 등록할 필요 없으므로 제외
+  when: inventory_hostname != 'server-1'
+  ignore_errors: true  # 이미 등록되어 있으면 에러 무시
+
+- name: Run FE Container
+  docker_container:
+    name: starrocks-fe
+    image: starrocks/fe-ubuntu:latest
+    network_mode: host
+    restart_policy: unless-stopped
+    hostname: "{{ inventory_hostname }}"
+    command: >
+      {% if inventory_hostname == 'server-1' %}
+      /opt/starrocks/fe/bin/start_fe.sh
+      {% else %}
+      /opt/starrocks/fe/bin/start_fe.sh --helper server-1:9010
+      {% endif %}
+    recreate: yes
+    volumes:
+      - /data/starrocks/fe/meta:/opt/starrocks/fe/meta
+      - /data/starrocks/fe/conf/fe.conf:/opt/starrocks/fe/conf/fe.conf
+      - /data/starrocks/fe/log:/opt/starrocks/fe/log
+    env:
+      TZ: "Asia/Seoul"
+      HOST_TYPE: "FQDN"
+      JAVA_OPTS_FE: "-Dfrontend_ip={{ hostvars[inventory_hostname].private_ip }}"

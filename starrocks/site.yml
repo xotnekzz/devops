@@ -1,0 +1,64 @@
+---
+# 1. OS 튜닝 및 공통 설정
+- name: Apply Base Tuning
+  hosts: starrocks_cluster
+  become: true
+  roles:
+    - base
+
+# 2. [Step 1] Leader FE 배포 (server-1만 먼저 실행)
+- name: Deploy Leader FE
+  hosts: server-1
+  become: true
+  roles:
+    - fe
+  vars:
+    fe_role: "leader"  # Role 내부에서 분기 처리용 변수
+
+# 3. [Step 2] Leader 상태 확인 (Health Check)
+- name: Wait for Leader FE Ready
+  hosts: server-1
+  become: true
+  tasks:
+    - name: Wait for TCP port 9030
+      wait_for:
+        port: 9030
+        host: '127.0.0.1'
+        delay: 5
+        timeout: 120
+
+# 4. [Step 3] Follower FE 배포 및 조인 (Leader가 뜬 후 실행)
+- name: Deploy Follower FEs
+  hosts: fe_servers:!server-1
+  become: true
+  roles:
+    - fe
+  vars:
+    fe_role: "follower"
+
+# 5. [Step 4] BE 배포
+- name: Deploy BE Nodes
+  hosts: be_servers
+  become: true
+  roles:
+    - be
+
+# 6. [Step 5] BE 노드 Leader FE에 등록
+- name: Register BE Nodes to Leader
+  hosts: server-1  # 등록 명령은 Leader FE에서 수행
+  become: true
+  gather_facts: false # server-1 팩트는 이미 수집되었으므로 생략 가능
+  vars:
+    fe_query_port: 9030
+    be_heartbeat_port: 9050
+  tasks:
+    - name: Add Backend nodes to StarRocks Cluster
+      shell: |
+        docker exec starrocks-fe mysql -h 127.0.0.1 -P9030 -uroot -e "ALTER SYSTEM ADD BACKEND '{{ hostvars[item]['ansible_host'] | default(item) }}:{{ be_heartbeat_port }}'"
+      loop: "{{ groups['be_servers'] }}"
+      register: add_be_result
+      # 이미 등록된 경우 에러를 무시하거나, 멱등성을 위해 실패 처리 조건을 완화
+      failed_when: 
+        - add_be_result.rc != 0
+        - '"Same backend already exists" not in add_be_result.stderr'
+        - '"Same backend already exists" not in add_be_result.stdout'
