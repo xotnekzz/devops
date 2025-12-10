@@ -1,2 +1,3 @@
-./vagrant
-./gemini
+.rocky9/.vagrant
+.starrocks/.vagrant
+.gemini
