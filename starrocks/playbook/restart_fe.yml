@@ -1,0 +1,71 @@
+---
+- name: StarRocks FE (Docker) 안전한 재시작 및 복구
+  hosts: fe_servers
+  become: yes  # docker 명령어 실행을 위해 root 권한 필요
+  serial: 1
+
+  vars:
+    # [설정] 실제 컨테이너 이름
+    fe_container_name: "starrocks-fe"
+    
+    # [설정] 컨테이너 내부의 StarRocks 설치 경로 (버전마다 다를 수 있으니 확인 필요)
+    # 보통 /opt/starrocks/fe 또는 /home/starrocks/fe 입니다.
+    fe_home_inner: "/opt/starrocks/fe"
+
+  tasks:
+    # -------------------------------------------------------
+    # 1단계: 호스트(Vagrant VM) 시간 복구
+    # -------------------------------------------------------
+    - name: 호스트 시간 강제 동기화 (Mac 잠자기 문제 해결)
+      shell: |
+        ntpdate pool.ntp.org || systemctl restart chronyd || systemctl restart systemd-timesyncd
+      ignore_errors: yes
+
+    - name: 호스트 시간 확인
+      command: date
+      register: host_time
+
+    - name: 시간 확인 출력
+      debug:
+        msg: "현재 호스트(VM) 시간: {{ host_time.stdout }}"
+
+    # -------------------------------------------------------
+    # 2단계: 안전한 종료 (Graceful Shutdown)
+    # * docker restart를 바로 쓰면 강제 종료(SIGKILL)로 메타데이터가 깨집니다.
+    # * 반드시 내부 스크립트(stop_fe.sh)를 먼저 실행해야 합니다.
+    # -------------------------------------------------------
+    - name: FE 내부 종료 스크립트 실행 (stop_fe.sh)
+      shell: "docker exec {{ fe_container_name }} {{ fe_home_inner }}/bin/stop_fe.sh"
+      ignore_errors: yes 
+      # 설명: 이미 죽어있거나 에러가 나도, 다음 단계(restart)로 넘어가기 위해 에러 무시
+
+    - name: 메타데이터 저장 대기 (Checkpointing)
+      pause:
+        seconds: 15
+      # 설명: 메모리에 있는 데이터를 디스크(meta)에 쓸 시간을 넉넉히 줍니다.
+
+    # -------------------------------------------------------
+    # 3단계: Docker 컨테이너 재시작
+    # * 이제 안전하게 프로세스가 내려갔으므로 컨테이너를 다시 띄웁니다.
+    # -------------------------------------------------------
+    - name: StarRocks FE 컨테이너 재시작
+      shell: "docker restart {{ fe_container_name }}"
+      register: docker_result
+
+    - name: 재시작 명령어 결과
+      debug:
+        msg: "컨테이너 {{ fe_container_name }} 재시작 명령 실행됨"
+
+    # -------------------------------------------------------
+    # 4단계: 포트 확인 (헬스 체크)
+    # -------------------------------------------------------
+    - name: FE 포트(9010)가 올라올 때까지 대기
+      wait_for:
+        port: 9010
+        delay: 10     # Java 뜨는 시간 고려해서 10초 뒤부터 체크
+        timeout: 90   # 메타데이터 로딩이 길어질 수 있으므로 90초 대기
+        state: started
+
+    - name: 성공 메시지 출력
+      debug:
+        msg: "Docker FE 서비스가 안전하게 재시작되어 정상화되었습니다."
