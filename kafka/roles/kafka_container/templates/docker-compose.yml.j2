@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  # ==========================================
+  # Apache Kafka (All Nodes)
+  # ==========================================
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    restart: always
+    network_mode: host
+    user: "1000:1000"
+    environment:
+      # --- 1. 역할 설정 (Combined Mode: Broker + Controller) ---
+      - KAFKA_NODE_ID={{ kafka_node_ids[inventory_hostname] }}
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@server-4:9093,2@server-5:9093,3@server-6:9093
+      
+      # --- 2. 리스너 설정 ---
+      # 9092: Client(Producer/Consumer/UI) 통신
+      # 9093: Controller/Broker 간 내부 통신
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://{{ inventory_hostname }}:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+
+      # --- 3. KRaft 초기화 및 데이터 ---
+      - CLUSTER_ID={{ kafka_cluster_id }}
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
+      
+      # --- 4. 안정성 옵션 (데이터 복제) ---
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=3
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=2
+
+    volumes:
+      - {{ kafka_data_dir }}:/var/lib/kafka/data
+
+# ==========================================
+# Kafka UI (Only on Server-4)
+# ==========================================
+{% if inventory_hostname == 'server-4' %}
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: always
+    network_mode: host  # 8080 포트로 서비스됨
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=devops-project
+      # UI가 접속할 브로커 목록 (하나가 죽어도 UI는 살도록 전체 명시)
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=server-4:9092,server-5:9092,server-6:9092
+      - DYNAMIC_CONFIG_ENABLED=true
+{% endif %}

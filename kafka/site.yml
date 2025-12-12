@@ -1,0 +1,20 @@
+---
+- name: Setup Kafka Cluster (KRaft Combined Mode) & UI
+  hosts: kafka_cluster
+  become: yes
+  vars:
+    # 1. 노드 식별자 (KRaft 필수)
+    kafka_node_ids:
+      server-4: 1
+      server-5: 2
+      server-6: 3
+    
+    # 2. 클러스터 ID (고정된 UUID, 변경 금지)
+    kafka_cluster_id: "MkU3OEVBNTcwNTJENDM2Qk"
+    
+    # 3. 데이터 저장 경로 (호스트)
+    kafka_data_dir: "/data/kafka"
+
+  roles:
+    - docker             # ../roles/docker (Docker 설치)
+    - kafka_container    # ./roles/kafka_container (Kafka 배포)
