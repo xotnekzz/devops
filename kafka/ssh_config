@@ -1,11 +1,37 @@
-Host server-6
+Host server-1
+  HostName 127.0.0.1
+  User vagrant
+  Port 2222
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-1/vmware_desktop/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+  PubkeyAcceptedKeyTypes +ssh-rsa
+  HostKeyAlgorithms +ssh-rsa
+
+Host server-2
+  HostName 127.0.0.1
+  User vagrant
+  Port 2200
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-2/vmware_desktop/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+  PubkeyAcceptedKeyTypes +ssh-rsa
+  HostKeyAlgorithms +ssh-rsa
+
+Host server-3
   HostName 127.0.0.1
   User vagrant
   Port 2201
   UserKnownHostsFile /dev/null
   StrictHostKeyChecking no
   PasswordAuthentication no
-  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-6/virtualbox/private_key
+  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-3/vmware_desktop/private_key
   IdentitiesOnly yes
   LogLevel FATAL
   PubkeyAcceptedKeyTypes +ssh-rsa
@@ -18,7 +44,7 @@ Host server-4
   UserKnownHostsFile /dev/null
   StrictHostKeyChecking no
   PasswordAuthentication no
-  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-4/virtualbox/private_key
+  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-4/vmware_desktop/private_key
   IdentitiesOnly yes
   LogLevel FATAL
   PubkeyAcceptedKeyTypes +ssh-rsa
@@ -31,7 +57,7 @@ Host server-5
   UserKnownHostsFile /dev/null
   StrictHostKeyChecking no
   PasswordAuthentication no
-  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-5/virtualbox/private_key
+  IdentityFile /Users/tskim/Project/devops/rocky9/.vagrant/machines/server-5/vmware_desktop/private_key
   IdentitiesOnly yes
   LogLevel FATAL
   PubkeyAcceptedKeyTypes +ssh-rsa

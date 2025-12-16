@@ -5,12 +5,12 @@
   vars:
     # 1. 노드 식별자 (KRaft 필수)
     kafka_node_ids:
-      server-4: 1
-      server-5: 2
-      server-6: 3
+      server-3: 1
+      server-4: 2
+      server-5: 3
     
     # 2. 클러스터 ID (고정된 UUID, 변경 금지)
-    kafka_cluster_id: "MkU3OEVBNTcwNTJENDM2Qk"
+    kafka_cluster_id: "MkUwOEVBNTcwNTJENDM2Qk"
     
     # 3. 데이터 저장 경로 (호스트)
     kafka_data_dir: "/data/kafka"

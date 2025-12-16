@@ -1,12 +1,13 @@
 # Vagrantfile
 Vagrant.configure("2") do |config|
-  config.vm.box = "generic/rocky9"
-  
-  # 서버 5대 정의 (IP: 192.168.56.11 ~ 15)
+  # Apple Silicon(ARM64)에서 네트워크 호환성이 좋은 Box로 변경
+  config.vm.box = "almalinux/9"
+
+  # 서버 5대 정의
   servers = [
     { name: "server-1", ip: "192.168.56.11" },
     { name: "server-2", ip: "192.168.56.12" },
-    { name: "server-6", ip: "192.168.56.16" },
+    { name: "server-3", ip: "192.168.56.13" },
     { name: "server-4", ip: "192.168.56.14" },
     { name: "server-5", ip: "192.168.56.15" }
   ]
@@ -14,12 +15,25 @@ Vagrant.configure("2") do |config|
   servers.each do |server|
     config.vm.define server[:name] do |node|
       node.vm.hostname = server[:name]
+
+      # 1. 고정 IP 설정
+      # AlmaLinux Box는 Vagrant의 네트워크 설정을 네이티브로 잘 지원합니다.
       node.vm.network "private_network", ip: server[:ip]
-      
-      node.vm.provider "virtualbox" do |vb|
-        vb.memory = "2048"   # 2GB RAM
-        vb.cpus = 2          # 2 vCPU
-        vb.linked_clone = true
+
+      # 2. VMware Provider 설정
+      node.vm.provider "vmware_desktop" do |vm|
+        # GUI: 초기 구성 시에는 true로 두어 화면을 확인하는 것이 안전합니다.
+        # 설정이 잘 되면 나중에 false로 바꾸셔도 됩니다.
+        vm.gui = false
+        
+        vm.memory = 2048
+        vm.cpus = 2
+        
+        # Apple Silicon Linux 퍼포먼스 표준 (vmxnet3)
+        vm.vmx["ethernet0.virtualDev"] = "vmxnet3"
+        
+        # 신뢰할 수 있는 박스 팝업 최소화
+        vm.allowlist_verified = true
       end
     end
   end

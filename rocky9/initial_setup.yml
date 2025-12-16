@@ -25,6 +25,7 @@
         name: firewalld
         state: stopped
         enabled: no
+      ignore_errors: yes  # [추가] 서비스가 없으면 에러 내지 말고 무시해라
 
     - name: 4. Swap 메모리 비활성화 (K8s 필수 조건)
       shell: |
@@ -41,6 +42,14 @@
           192.168.56.14 server-4
           192.168.56.15 server-5
           192.168.56.16 server-6
+
+    - name: 6. DNS 서버 설정 (Google DNS로 강제 덮어쓰기)
+      copy:
+        dest: /etc/resolv.conf
+        content: |
+          nameserver 8.8.8.8
+          nameserver 8.8.4.4
+        mode: '0644'
 
   roles:
       - docker
