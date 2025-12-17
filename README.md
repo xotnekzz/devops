@@ -4,6 +4,6 @@
 
 [Starrocks 클러스터 구축하기 with Ansible](https://tedi.tistory.com/49)
 
-[Kafka KRaft Cluster 구축하기 with Ansibl](https://tedi.tistory.com/50)
+[Kafka KRaft Cluster 구축하기 with Ansible](https://tedi.tistory.com/50)
 
 
